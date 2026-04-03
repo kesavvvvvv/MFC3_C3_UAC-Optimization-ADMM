@@ -208,6 +208,8 @@ K. Harikumar, S. Athira, Y. C. Nair, V. Sowmya and K. P. Soman, "ADMM based algo
 
 # Project-2: Optimization of Sparse Underwater Acoustic Channels using Robust ADMM
 
+---
+
 ## Project Overview
 Underwater Acoustic (UWA) communication systems rely on **sound waves** to transmit data through water. However, these channels are extremely challenging due to:
 
@@ -223,150 +225,397 @@ This project proposes a **Robust ADMM (Alternating Direction Method of Multiplie
 
 ## Problem Statement
 
-The received signal is modeled as:
+The received signal model:
 
-\[
-y = Ax + n
-\]
+y = A x + n
 
 Where:
-- \( y \in \mathbb{R}^{M \times 1} \): Received signal vector  
-- \( A \in \mathbb{R}^{M \times N} \): Known pilot/training matrix  
-- \( x \in \mathbb{R}^{N \times 1} \): Sparse channel coefficients  
-- \( n \): Noise (impulsive + Gaussian)  
+- y ∈ R^(M×1): Received signal  
+- A ∈ R^(M×N): Known pilot/training matrix  
+- x ∈ R^(N×1): Sparse channel coefficients  
+- n: Noise (impulsive + Gaussian)  
 
 ### Key Challenge
 - The system is **underdetermined (M < N)**
-- However, the channel \( x \) is **sparse**, enabling compressed sensing approaches
+- The channel vector **x is sparse**
+- This enables **compressed sensing-based recovery**
 
 ---
 
 ## Optimization Formulation
 
-We formulate the estimation as:
+We solve the following problem:
 
-\[
-\min_x \|y - Ax\|_1 + \tau \|x\|_1
-\]
+minimize   ||y - A x||_1 + τ ||x||_1
 
 ### Interpretation
-- \( \|y - Ax\|_1 \): Robust to impulsive noise  
-- \( \|x\|_1 \): Promotes sparsity  
-- \( \tau \): Regularization parameter  
+- ||y - Ax||₁ → Robust against impulsive noise  
+- ||x||₁ → Promotes sparsity  
+- τ → Regularization parameter controlling trade-off  
 
 ---
 
-## ADMM Reformulation
+# Mathematical derivation
 
-Introduce auxiliary variable:
+---
 
-\[
+## Original Optimization Problem
+
+min_x  ||y - Ax||_1 + τ ||x||_1
+
+### Problem Difficulty:
+- L1 norm is non-smooth (non-differentiable)
+- Cannot be solved using standard gradient methods
+- Requires advanced optimization techniques
+
+---
+
+## Introduce Auxiliary Variable
+
+Let:
+
 z = y - Ax
-\]
 
-### Variables:
-- \( x \): Channel estimate  
-- \( z \): Residual  
-- \( \gamma \): Lagrange multiplier  
-- \( \rho \): Penalty parameter  
+Rewrite problem:
+
+minimize   ||z||_1 + τ ||x||_1  
+subject to: z = y - Ax
 
 ---
 
-## ADMM Iterative Updates
+## Convert to ADMM Standard Form
 
-The optimization is solved iteratively:
+Rewrite constraint:
 
-\[
-x^{(k+1)} = \arg\min_x f_1(x) + f_2(x)
-\]
+Ax + z = y
 
-\[
-z^{(k+1)} = \arg\min_z g_1(z) + g_2(z)
-\]
+Now:
 
-\[
-\gamma^{(k+1)} = \gamma^{(k)} + \rho(z^{(k+1)} + Ax^{(k+1)} - y)
-\]
+minimize   f(x) + g(z)  
+subject to Ax + z = y
+
+Where:
+- f(x) = τ ||x||₁  
+- g(z) = ||z||₁  
 
 ---
 
-## Handling Non-Solvability
+## Augmented Lagrangian
 
-Direct solutions are not feasible, so we use:
+L(x, z, γ) =  
+||z||₁ + τ||x||₁  
++ γᵀ(Ax + z - y)  
++ (ρ/2) ||Ax + z - y||₂²  
 
-- **Proximal operators**
-- **Linearization of functions**
+Where:
+- γ = Lagrange multiplier  
+- ρ = penalty parameter  
+
+---
+
+## Scaled Form
+
+Let:
+
+u = γ / ρ
+
+Then:
+
+L(x, z) = ||z||₁ + τ||x||₁ + (ρ/2)||Ax + z - y + u||₂²
+
+---
+
+## ADMM Iterations
+
+### (1) x-update
+
+x^(k+1) = argmin_x [  
+τ||x||₁ + (ρ/2)||Ax + z^k - y + u^k||₂²  
+]
+
+Gradient:
+
+∇f1(x) = ρ Aᵀ(Ax + z - y + u)
+
+Using proximal step:
+
+x^(k+1) = prox_(τ/ρ)( x^k - (1/ρ) ∇f1(x^k) )
+
+---
+
+### (2) z-update
+
+z^(k+1) = argmin_z [  
+||z||₁ + (ρ/2)||Ax^(k+1) + z - y + u^k||₂²  
+]
+
+Gradient:
+
+∇g1(z) = ρ (Ax + z - y + u)
+
+Update:
+
+z^(k+1) = prox_(1/ρ)( z^k - (1/ρ) ∇g1(z^k) )
+
+---
+
+### (3) Dual update
+
+u^(k+1) = u^k + (Ax^(k+1) + z^(k+1) - y)
 
 ---
 
 ## Proximal Operator
 
-\[
-\text{prox}_{f,t}(x) = \arg\min_{x^+} \left( \frac{1}{2t} \|x^+ - x\|_2^2 + f(x^+) \right)
-\]
+prox_f(x) = argmin_u [ (1/2)||u - x||₂² + f(u) ]
 
 ---
 
-## Soft Thresholding (L1 Regularization)
+## Soft Thresholding
 
-\[
-S_\alpha(\beta) =
-\begin{cases}
-\beta - \alpha, & \beta > \alpha \\
-0, & |\beta| \le \alpha \\
-\beta + \alpha, & \beta < -\alpha
-\end{cases}
-\]
+S_α(x) = sign(x) * max(|x| - α, 0)
 
 ---
 
-## Final Update Equations
+## Final Closed-Form Updates
 
-\[
-x^{(k+1)} = S_{t_x/\rho}\left(x^{(k)} - \frac{t_x}{\rho} \nabla f_1(x^{(k)})\right)
-\]
+x^(k+1) = S_(τ/ρ) [ x^k - (1/ρ) Aᵀ(Ax^k + z^k - y + u^k) ]
 
-\[
-z^{(k+1)} = S_{t_z\tau/\rho}\left(z^{(k)} - \frac{t_z}{\rho} \nabla g_1(z^{(k)})\right)
-\]
+z^(k+1) = S_(1/ρ) [ z^k - (Ax^(k+1) - y + u^k) ]
+
+u^(k+1) = u^k + (Ax^(k+1) + z^(k+1) - y)
 
 ---
 
 ## Convergence Criteria
 
-The algorithm stops when:
+Primal residual:
 
-### Primal Residual:
-\[
-r_p = Ax^{(k+1)} + z^{(k+1)} - y
-\]
+r_p = Ax + z - y
 
-### Dual Residual:
-\[
-r_d = \rho A^H (r_p^{(k+1)} - r_p^{(k)}) - \frac{1}{t_x}(x^{(k+1)} - x^{(k)})
-\]
+Dual residual:
 
-### Stopping Condition:
-- Both residuals fall below predefined tolerance(1e-4)
+r_d = ρ Aᵀ (r_p^(k+1) - r_p^(k))
+
+Stopping condition:
+
+||r_p||₂ < 1e-4 AND ||r_d||₂ < 1e-4
 
 ---
 
-## Results & Performance
+# Results & Performance
 
 ### Simulation Conditions:
 - SINR = -∞ (extreme noise)
 - SINR = 40
 - SINR = 50  
 
-### Observations:
+---
+
+###  Observations:
 - ADMM outperforms:
   - OMP (Orthogonal Matching Pursuit)
   - FISTA (Fast Iterative Shrinkage Thresholding Algorithm)
+
+---
 
 ### Metrics:
 - NMSE (Normalized Mean Square Error)
 - Signal norm comparison
 - Channel reconstruction accuracy  
 
+---
+
+#  Conclusion
+
+The Robust ADMM algorithm:
+
+- Efficiently estimates sparse underwater channels  
+- Maintains performance under extreme noise  
+- Outperforms OMP and FISTA  
+- Converges faster and reliably  
 
 ---
+
+# Reference
+
+Optimization of Sparse Underwater Acoustic Channels using Robust ADMM
+
+---
+---
+
+# Analog Computing Implementation
+
+## Overview
+In addition to the digital optimization using ADMM, this project also explores **analog computation of differential equations** using electronic circuits. Analog computing provides a continuous-time physical realization of mathematical models using components like operational amplifiers, resistors, capacitors, and inductors. This enables real-time computation without discretization.
+
+##  Governing Differential Equation
+The system is modeled using a second-order differential equation:
+
+d²v/dt² + dw/dt + v₀ = u₀
+
+Where:
+- d²v/dt² → Acceleration (second derivative of v)
+- dw/dt → Rate of change of variable w
+- v₀ → Constant bias / initial condition
+- u₀ → External input (forcing function)
+
+---
+
+## Physical Interpretation
+This equation represents a dynamic system:
+- Second derivative → inertia / acceleration
+- First derivative → damping / energy dissipation
+- Constant term → equilibrium / bias
+- Input → external forcing
+
+This is analogous to:
+- Mass-spring-damper systems
+- RLC circuits
+- Control systems
+
+---
+
+# Mathematical Derivation
+
+## Rearranging Equation
+We isolate the highest derivative:
+
+d²v/dt² = u₀ - v₀ - dw/dt
+
+## Convert to Integrator Form
+Analog circuits prefer integration over differentiation:
+
+dv/dt = ∫ (d²v/dt²) dt  
+v = ∫ (dv/dt) dt  
+
+Thus, we use two cascaded integrators to compute v.
+
+
+## Block Representation
+Break system into stages:
+
+1. Compute RHS:
+RHS = u₀ - v₀ - dw/dt  
+
+2. First integrator:
+dv/dt = ∫ RHS dt  
+
+3. Second integrator:
+v = ∫ (dv/dt) dt  
+
+## Circuit Mapping
+
+### Integrator (Op-Amp Based)
+Vout = - (1/RC) ∫ Vin dt  
+
+Used to compute:
+- dv/dt
+- v
+
+### Differentiator Circuit
+Vout = -RC (dVin/dt)  
+
+Used to compute:
+dw/dt  
+
+### Summing Amplifier
+To compute RHS:
+
+u₀ - v₀ - dw/dt  
+
+We use an op-amp summer:
+Vout = -(V1 + V2 + V3)
+
+
+## Full Analog Architecture
+The complete system consists of:
+- Summing amplifier (forms RHS)
+- Differentiator (computes dw/dt)
+- Two integrators (produce v)
+
+
+##  Equivalent Physical System (RLC)
+This system is equivalent to:
+
+L d²i/dt² + R di/dt + (1/C)i = V(t)
+
+Where:
+- Inductor → second derivative
+- Resistor → damping
+- Capacitor → integration
+
+
+
+## Hardware Implementation
+The physical circuit includes:
+- Operational amplifiers configured as integrators and summers
+- Resistors and capacitors for scaling
+- Breadboard wiring with signal input
+
+
+## Output Measurement
+Signals were captured using an oscilloscope in scopy software
+
+
+## Waveform Analysis
+
+### Channel 1 (Orange)
+- Represents system output v
+- Smooth sinusoidal waveform
+
+### Channel 2 (Purple)
+- Represents derivative or input signal
+- Higher amplitude waveform
+
+
+##  Observations
+
+### Oscillatory Behavior
+- Sinusoidal output confirms second-order dynamics
+
+### Phase Shift
+- Signals are phase shifted due to integration/differentiation
+
+### Amplitude Difference
+- Higher amplitude in derivative signal
+
+### Frequency
+- Around 1–2 kHz range
+
+---
+
+## Interpretation
+- The circuit successfully solves the differential equation
+- Output matches expected theoretical behavior
+- Demonstrates real-time analog computation
+
+---
+
+##  Advantages
+- Real-time computation
+- Continuous signal processing
+- No discretization error
+- Efficient for differential equations
+
+---
+
+##  Limitations
+- Sensitive to noise
+- Component inaccuracies
+- Hard to scale
+- Less flexible than digital methods
+
+---
+
+##  Conclusion
+The analog computing implementation:
+- Successfully models a second-order system
+- Produces correct oscillatory outputs
+- Matches theoretical expectations
+- Validates physical computation of differential equations
+
+---
+
+## Reference
+Analog paradigm- https://analogparadigm.com/
