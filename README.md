@@ -177,6 +177,7 @@ $$
 
 ## Experiments
 
+We didnt explicitly used a dataset, we have generated few noisy signals in matlab and have applied the ADMM function on these signals to decompose and reconstruct them.
 | SNR (dB) | N   | k₁ (smooth) | k₂ (spike) |
 |----------|-----|------------|------------|
 | 20 dB    | 100 | 5          | 10         |
@@ -404,7 +405,7 @@ Stopping condition:
 ---
 
 # Results & Performance
-
+We didnt explicitly used a dataset.
 ### Simulation Conditions:
 - SINR = -∞ (extreme noise)
 - SINR = 40
