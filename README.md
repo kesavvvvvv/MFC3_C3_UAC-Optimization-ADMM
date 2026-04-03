@@ -1,5 +1,5 @@
 ![amrita_logo](assets/Amrita.png)
-Mathematics for Computing-3
+# Mathematics for Computing-3
 
 ---
 
@@ -527,7 +527,7 @@ u₀ - v₀ - dw/dt
 We use an op-amp summer:
 Vout = -(V1 + V2 + V3)
 
-
+![analog_circuit_hand_drawn](assets/analog-hand_drawn.png)
 ## Full Analog Architecture
 The complete system consists of:
 - Summing amplifier (forms RHS)
@@ -552,11 +552,11 @@ The physical circuit includes:
 - Operational amplifiers configured as integrators and summers
 - Resistors and capacitors for scaling
 - Breadboard wiring with signal input
-
+![analog_circuit_implemented](assets/analog-circuit.png)
 
 ## Output Measurement
 Signals were captured using an oscilloscope in scopy software
-
+![analog_output](assets/analog-scopy.png)
 
 ## Waveform Analysis
 
